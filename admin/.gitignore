@@ -1,0 +1,7 @@
+.tmp/
+coverage.out
+*.coverprofile
+*.test
+*.db
+*.db-shm
+*.db-wal

@@ -1,0 +1,52 @@
+# macOS
+.DS_Store
+
+# OpenVPN configs with private keys and certificates
+*.ovpn
+
+# Certificates, private keys and OpenVPN credential files
+*.key
+*.pem
+*.crt
+*.p12
+auth.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts
+bin/
+*.out
+coverage.out
+coverage.html
+*.db
+*.db-wal
+*.db-shm
+/admin/admin
+
+# Dependencies
+node_modules/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+host/rules/proxy.json
+host/split-domains.txt
+host/clash-secret
+host/sing-box.json
+
+# Docker
+docker-compose.override.yml
+
+# Agents / tooling
+.opencode/
+.worktrees/
+.orca-reports/
+.claude/
+
+# Admin panel token (see docker-compose.override.yml.example)
+admin-token

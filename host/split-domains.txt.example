@@ -1,0 +1,5 @@
+# DNS zones to keep outside the VPN, one per line (suffixes; subdomains are included).
+# Copy to host/split-domains.txt (kept out of git) and fill in your own zones.
+# Zones listed here would be resolved and routed outside the VPN by a future
+# full-tunnel mode (not implemented yet; see README.md, "Development").
+example.com

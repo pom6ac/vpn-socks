@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Admin Panel</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/chart.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>VPN Admin Panel</h1>
+        <div id="overall-health" class="health-badge unknown">—</div>
+    </header>
+
+    <div id="docker-banner" class="banner hidden">Docker API unavailable</div>
+    <div id="notif-banner" class="banner notif-banner hidden">
+        Browser notifications are disabled. <a href="#" id="notif-enable">Enable</a> to receive tunnel-down alerts.
+    </div>
+
+    <main>
+        <section id="topology-panel" class="panel wide">
+            <h2>Network</h2>
+            <div id="topology" class="topology"></div>
+        </section>
+
+        <section id="status-panel" class="panel">
+            <h2>Container Status</h2>
+            <div id="container-cards" class="cards"></div>
+        </section>
+
+        <section id="health-panel" class="panel">
+            <h2>Tunnel Health</h2>
+            <div id="health-probes" class="cards"></div>
+        </section>
+
+        <section id="traffic-panel" class="panel">
+            <h2>Traffic
+                <select id="traffic-range">
+                    <option value="1h">1h</option>
+                    <option value="24h" selected>24h</option>
+                </select>
+            </h2>
+            <canvas id="traffic-chart" width="600" height="200"></canvas>
+            <div id="traffic-unavailable" class="traffic-unavail hidden">Traffic data unavailable</div>
+            <div id="traffic-current">
+                RX: <span id="rx-current">—</span> B/s |
+                TX: <span id="tx-current">—</span> B/s
+            </div>
+        </section>
+
+        <section id="control-panel" class="panel">
+            <h2>Control</h2>
+            <div class="controls">
+                <button class="btn" data-action="restart" data-role="ovpn">Restart ovpn</button>
+                <button class="btn" data-action="restart" data-role="socks">Restart socks5</button>
+                <button class="btn" data-action="reconnect">Reconnect OpenVPN</button>
+                <button class="btn" data-action="recreate">Recreate Stack</button>
+            </div>
+            <div id="action-output" class="output"></div>
+        </section>
+
+        <section id="log-panel" class="panel">
+            <h2>Logs</h2>
+            <div class="log-tabs">
+                <button class="tab active" data-role="ovpn">ovpn</button>
+                <button class="tab" data-role="socks">socks5</button>
+            </div>
+            <div id="log-lines" class="log-lines"></div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

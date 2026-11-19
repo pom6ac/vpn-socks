@@ -1,0 +1,12 @@
+# Build context hygiene: nothing but sources is needed in the image.
+.tmp/
+.golangci.yml
+Dockerfile
+.dockerignore
+coverage.out
+*.coverprofile
+*.out
+*.test
+*.db
+*.db-shm
+*.db-wal

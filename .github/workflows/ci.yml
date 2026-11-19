@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: admin/go.mod
+          cache-dependency-path: admin/go.sum
+      - run: go vet ./...
+      - run: go test -race ./...
+      - name: Coverage (threshold 85%)
+        working-directory: .
+        run: make cover
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: admin/go.mod
+          cache-dependency-path: admin/go.sum
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          # Keep in sync with the version used locally (config: admin/.golangci.yml, v2 format).
+          version: v2.15.0
+          working-directory: admin
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate docker-compose.yml
+        run: HOST_PROJECT_DIR="$PWD" docker compose --env-file .env.example config -q
+      - name: Validate docker-compose.yml with the token override
+        run: HOST_PROJECT_DIR="$PWD" docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.override.yml.example config -q
+      - run: docker build admin
+
+  shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # shellcheck is preinstalled on the GitHub Ubuntu runners.
+      - name: shellcheck
+        run: shellcheck ovpn/*.sh
+      - name: Kill switch script tests
+        run: sh ovpn/killswitch_test.sh

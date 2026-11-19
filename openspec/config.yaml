@@ -1,0 +1,52 @@
+schema: spec-driven
+
+context: |
+  ## Purpose
+  A local VPN gateway: an OpenVPN client in Docker that exposes a SOCKS5
+  proxy on 127.0.0.1:1080, with a kill switch and a local web admin panel.
+  Only applications explicitly configured to use the proxy go through the
+  VPN; nothing else on the host is rerouted.
+
+  ## Architecture
+  - **ovpn** — dperson/openvpn-client; connects using the user's `.ovpn`
+    config (never committed). Its network namespace is the only way out for
+    proxied traffic. DNS is resolved through the tunnel.
+  - **Kill switch** — an iptables egress allowlist in the ovpn container
+    (`ovpn/killswitch-entrypoint.sh`); fails closed: if it cannot be
+    installed, OpenVPN does not start.
+  - **socks5** — serjs/go-socks5-proxy with `network_mode: service:ovpn`;
+    the port is published on ovpn, loopback only. Username/password
+    authentication is optional (`SOCKS_REQUIRE_AUTH`).
+  - **admin** — Go service with an embedded web UI on 127.0.0.1:8090, in its
+    own bridge network so it survives ovpn/socks5 restarts. Implemented:
+    container status, streamed logs with error highlighting, health probes
+    through the proxy (tunnel connect, DNS, HTTP, exit IP / leak check),
+    live `tun0` traffic and history (SQLite), network topology, controls
+    (restart, OpenVPN reconnect, recreate ovpn/socks5), optional API token.
+    See `README.md` and `openspec/changes/archive/`.
+
+  ## Platform
+  Docker with Compose v2: Docker Desktop (macOS, Windows) or Docker Engine
+  (Linux).
+
+  ## Technologies
+  Docker Compose, OpenVPN, SOCKS5, iptables, shell (entrypoint and tests).
+  Admin: Go (stdlib net/http, embed.FS), vanilla JS, Chart.js, SSE,
+  SQLite (modernc.org/sqlite), Docker Engine API over the unix socket.
+
+  ## Conventions
+  - Secrets and personal configuration (`*.ovpn`, `.env`, tokens, keys)
+    are git-ignored; only `*.example` files are committed.
+  - Published ports bind to 127.0.0.1 only.
+  - Images are pinned by digest; `restart: unless-stopped`.
+  - Documentation and specs are written in English.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours

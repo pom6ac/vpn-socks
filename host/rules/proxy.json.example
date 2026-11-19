@@ -1,0 +1,18 @@
+{
+  "version": 3,
+  "rules": [
+    {
+      "ip_cidr": ["203.0.113.10/32"]
+    },
+    {
+      "domain": ["example.com", "example.org"],
+      "domain_suffix": [
+        "example.net",
+        "example.edu"
+      ],
+      "domain_keyword": [
+        "example"
+      ]
+    }
+  ]
+}

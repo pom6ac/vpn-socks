@@ -1,0 +1,104 @@
+name: vpn-socks
+
+services:
+  ovpn:
+    # dperson/openvpn-client is no longer actively updated (see README).
+    # Pinned to the multi-arch digest of the last published tag ("latest").
+    image: dperson/openvpn-client@sha256:d174047b57d51734143325ad7395210643025e6516ba60a937e9319dbb462293
+    container_name: vpn-ovpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ${OVPN_CONFIG:-./client.ovpn}:/vpn/config.ovpn:ro
+      - ./ovpn/killswitch-entrypoint.sh:/vpn/killswitch-entrypoint.sh:ro
+    # Kill switch (see README): installs an egress allowlist (VPN server
+    # port/proto, tunnel, loopback, replies) and then execs the image's own
+    # entrypoint (tini -> openvpn.sh). It replaces the image's "-f" firewall,
+    # which would also need the compose network opened for admin -> ovpn:1080.
+    # openvpn.sh only picks *.conf/*.ovpn files from /vpn, so the script there
+    # is never mistaken for a config.
+    entrypoint: ["/bin/sh", "/vpn/killswitch-entrypoint.sh"]
+    # -d: use the DNS servers pushed by the VPN (resolv.conf via up/down
+    # scripts). No "-f"/FIREWALL/-r/ROUTE: the kill switch above is the firewall.
+    command: -d
+    environment:
+      # Optional VPN server host(s)/IP(s) replacing the hosts of the config's
+      # `remote` lines for the kill switch (see docs/kill-switch.md).
+      # Empty = use the `remote` hosts from the config.
+      - VPN_ENDPOINT_HOST=${VPN_ENDPOINT_HOST:-}
+    ports:
+      # Host access stays on loopback only; admin uses ovpn:1080 internally.
+      - "127.0.0.1:1080:1080"
+    restart: unless-stopped
+
+  socks5:
+    # Pinned to the multi-arch digest of the last published tag ("latest").
+    image: serjs/go-socks5-proxy@sha256:0af522996f402c03ecd985a87997158eabeb28935365e3a384df37eafcf740ea
+    container_name: vpn-socks
+    environment:
+      - REQUIRE_AUTH=${SOCKS_REQUIRE_AUTH:-false}
+      - PROXY_USER=${PROXY_USER:-}
+      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
+    network_mode: "service:ovpn"
+    depends_on:
+      - ovpn
+    restart: unless-stopped
+
+  admin:
+    build: ./admin
+    container_name: vpn-admin
+    ports:
+      - "127.0.0.1:8090:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOST_PROJECT_DIR:?set HOST_PROJECT_DIR to the absolute project path}:${HOST_PROJECT_DIR}:ro
+      - admin-data:/data
+    tmpfs:
+      - /tmp
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      # socks5 runs in the ovpn network namespace (network_mode: service:ovpn),
+      # so it listens on ovpn:1080 inside the compose network. This path does
+      # not depend on the host publish (loopback only) and works on Linux and
+      # Docker Desktop alike.
+      - SOCKS5_PROXY=ovpn:1080
+      # Credentials for the probes when SOCKS_REQUIRE_AUTH=true (empty = none).
+      - PROXY_USER=${PROXY_USER:-}
+      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
+      - COMPOSE_FILE=${HOST_PROJECT_DIR}/docker-compose.yml
+      - HOST_PROJECT_DIR=${HOST_PROJECT_DIR}
+      - COMPOSE_PROJECT_NAME=vpn-socks
+      - OVPN_CONTAINER=vpn-ovpn
+      - SOCKS_CONTAINER=vpn-socks
+      - ADMIN_CONTAINER=vpn-admin
+      - OVPN_CONFIG_PATH=/vpn/config.ovpn
+      - DB_PATH=/data/admin.db
+      - TUNNEL_TARGET=1.1.1.1
+      - TUNNEL_PORT=443
+      - DNS_CHECK_URL=http://example.com
+      - HTTP_CHECK_URLS=https://ifconfig.me,https://example.com
+      - EXIT_IP_URL=https://ifconfig.me/ip
+      # Expected VPN exit IP(s), comma-separated; a mismatch is reported as a
+      # leak (overall status down). Empty = show the exit IP without comparing.
+      - EXPECTED_EXIT_IP=${EXPECTED_EXIT_IP:-}
+      # Extra Host names (loopback names are always allowed).
+      - ADMIN_ALLOWED_HOSTS=${ADMIN_ALLOWED_HOSTS:-}
+      # The root filesystem is read-only: keep docker CLI state on the tmpfs.
+      - DOCKER_CONFIG=/tmp/.docker
+      # ADMIN_TOKEN_FILE is set in docker-compose.override.yml together with
+      # the secret it points to (see docker-compose.override.yml.example).
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  admin-data:

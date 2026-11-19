@@ -1,0 +1,31 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gosec
+  settings:
+    gosec:
+      excludes:
+        # The admin panel intentionally runs `docker compose` with arguments
+        # built from its own configuration (no shell involved).
+        - G204
+  exclusions:
+    rules:
+      # Tests use fixed temp paths, plain HTTP fixtures and fake servers.
+      - path: _test\.go
+        linters:
+          - gosec
+          - errcheck
+
+formatters:
+  enable:
+    - gofmt

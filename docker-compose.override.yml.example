@@ -1,0 +1,26 @@
+# Optional: require an access token for the admin panel API.
+#
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#   openssl rand -hex 32 > admin-token
+#   docker compose up -d
+#
+# docker compose merges docker-compose.override.yml automatically.
+# The token file is mounted at /run/secrets/admin_token; ADMIN_TOKEN_FILE
+# points the panel to it. Without this override no token is required.
+#
+# The admin container runs as root with cap_drop: ALL (no DAC_OVERRIDE), so the
+# file must be readable by its owner or by "other" on Linux hosts: either
+# `sudo chown root admin-token && sudo chmod 600 admin-token`, or keep your
+# user as owner with `chmod 644 admin-token` on a single-user machine.
+# Both docker-compose.override.yml and admin-token are gitignored.
+
+services:
+  admin:
+    environment:
+      - ADMIN_TOKEN_FILE=/run/secrets/admin_token
+    secrets:
+      - admin_token
+
+secrets:
+  admin_token:
+    file: ./admin-token
